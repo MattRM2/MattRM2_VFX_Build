@@ -59,6 +59,8 @@ The final `Depth` channel is a **`min(surface, volume)`** combine (*nearest wins
 - **Clean background** — empty pixels are filled with the maximum scene depth, so a **Normalize** node maps the whole frame cleanly (no `1e10` spike).
 
 > **Note:** this diverges from stock Blender's Z (non-antialiased, single sample). The output is a true antialiased depth ready for Normalize, defocus, and depth-driven atmospherics.
+>
+> **CPU only** — the antialiased Z-Depth works with **CPU rendering only**. GPU rendering is not yet supported and will **crash Blender**, so use CPU for this pass. A GPU port is on the roadmap.
 
 <div align="center">
   <img src="medias/New_Zdepth.png" width="1600"/>
@@ -115,6 +117,7 @@ Fixed a Cycles bug where volumes placed in **Indirect-Only** collections would n
 |---|---|
 | Deep EXR is CPU only | GPU port is on the roadmap |
 | Deep EXR volumes require Unbiased mode | Use Unbiased (delta-tracking). A warning is shown in the panel if Biased is active. |
+| Z Depth is CPU only (GPU rendering crashes Blender) | Use CPU rendering for the Depth pass. GPU port is on the roadmap. |
 | Z Depth: hard edge where a motion-blurred surface is partially in front of a volume | Render surface and volume on separate View Layers, each with a Depth pass, and `min()` them in compositing |
 
 ---
@@ -127,7 +130,7 @@ Fixed a Cycles bug where volumes placed in **Indirect-Only** collections would n
 - **Multi-layered Deep EXR** — all layers and deep in one file
 
 ### Medium Term
-- **Deep EXR GPU** — port volume raymarch and surface recording to OptiX / CUDA
+- **Deep EXR & Z-Depth GPU** — port the deep volume raymarch, surface recording, and the antialiased volume-aware Z-Depth to OptiX / CUDA (both are currently CPU only)
 - **LPE (Light Path Expressions)** — custom AOVs via light path expressions (Arnold / RenderMan parity)
 - **DeepID** — extend deep channels with `objectId`, `materialId`, `normal`, `albedo` per fragment
 - **Deep + DeepID Compositor Nodes** — native Blender compositing nodes for deep data manipulation (Deep Merge, Hold-Out, ID filter)
