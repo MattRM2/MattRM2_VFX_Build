@@ -15,11 +15,12 @@ A custom Blender build targeting professional VFX pipelines. Built on top of the
 
 ## Why This Build
 
-Blender is a world-class tool, but certain VFX pipeline features remain absent or incomplete for production use. This build focuses on three core gaps for now:
+Blender is a world-class tool, but certain VFX pipeline features remain absent or incomplete for production use. This build focuses on these core gaps for now:
 
 - **Deep EXR compositing** — the industry-standard format for high-quality depth compositing (DOF, motion blur, volume integration), not supported in stock Blender Cycles
 - **Z-Depth with volumes** — volumes are now present in a new, antialiased Z-Depth pass
 - **Pipeline path flexibility** — environment variable support in all file paths, including Preferences
+- **Qt Tools (PySide6)** — an extensible, separate-process Qt UI framework for rich pipeline tools, with a Deep EXR control panel as a demo
 - **And more** — see the roadmap at the end
 
 The goal is not to diverge from Blender, but to ship production-ready features to artists now, and to upstream fixes and improvements to the official project over time.
@@ -88,6 +89,16 @@ All three syntaxes are supported cross-platform. Variables are expanded at path 
 
 ---
 
+### <u>Qt Tools (PySide6)</u>
+
+A built-in framework to run **rich Qt (PySide6) UIs in their own process**, fully isolated from Blender — no freezes, always-on-top, and live two-way sync with Blender data. The **MattRM2 Qt Bridge** ships and auto-loads; tools are tiny scripts built on a shared SDK.
+
+A **Deep EXR control panel** is included as a demo — enable *MattRM2 — Deep EXR Panel (Qt demo)* in **Preferences > Add-ons**, then open it from the **MattRM2 Qt** tab in the N-panel.
+
+> **For developers** — building a custom tool is ~25 lines: declare a layout of Blender property paths and the SDK builds the widgets and handles the IPC. See the documentation for the SDK guide.
+
+---
+
 ## Bugfix
 
 ### <u>Node Editor Click-Drag</u>
@@ -125,12 +136,11 @@ Fixed a Cycles bug where volumes placed in **Indirect-Only** collections would n
 ## Roadmap
 
 ### Near Term
-- **PySide6 UI Integration (Qt for Python)** — bundle Qt for Python (LGPL) in Blender's interpreter to enable rich custom pipeline tools (asset browsers, farm submitters, advanced panels) beyond the native UI - // WIP //
-- **View Layer Attribute Overrides** — per-layer render settings, engine, samples, denoise, material overrides (Maya-style) - // WIP //
 - **Multi-layered Deep EXR** — all layers and deep in one file
+- **Deep EXR & Z-Depth GPU** — port the deep volume raymarch, surface recording, and the antialiased volume-aware Z-Depth to OptiX / CUDA (both are currently CPU only)
 
 ### Medium Term
-- **Deep EXR & Z-Depth GPU** — port the deep volume raymarch, surface recording, and the antialiased volume-aware Z-Depth to OptiX / CUDA (both are currently CPU only)
+- **View Layer Attribute Overrides** — per-layer render settings, engine, samples, denoise and material overrides (Maya-style)
 - **LPE (Light Path Expressions)** — custom AOVs via light path expressions (Arnold / RenderMan parity)
 - **DeepID** — extend deep channels with `objectId`, `materialId`, `normal`, `albedo` per fragment
 - **Deep + DeepID Compositor Nodes** — native Blender compositing nodes for deep data manipulation (Deep Merge, Hold-Out, ID filter)
@@ -179,5 +189,7 @@ This project represents months of low-level Cycles development: deep EXR archite
 ## License
 
 This build is a modified version of Blender, distributed under the **GNU General Public License v3**. Blender is © the Blender Foundation and contributors — see [blender.org/about/license](https://www.blender.org/about/license/).
+
+This build also bundles **Qt for Python (PySide6)** and **Qt**, used under the **GNU LGPL v3** (Qt libraries are dynamically linked). Qt is © The Qt Company and contributors — see [qt.io](https://www.qt.io). The full license texts are included in the distribution's `licenses/` folder.
 
 "Blender" is a trademark of the Blender Foundation. *MattRM2 VFX Build* is an independent project and is **not** affiliated with, sponsored by, or endorsed by the Blender Foundation.
