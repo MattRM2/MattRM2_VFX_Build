@@ -141,9 +141,9 @@ Fixed a Cycles bug where volumes placed in **Indirect-Only** collections would n
 
 ### Medium Term
 - **View Layer Attribute Overrides** — per-layer render settings, engine, samples, denoise and material overrides (Maya-style)
-- **LPE (Light Path Expressions)** — custom AOVs via light path expressions (Arnold / RenderMan parity)
 - **DeepID** — extend deep channels with `objectId`, `materialId`, `normal`, `albedo` per fragment
 - **Deep + DeepID Compositor Nodes** — native Blender compositing nodes for deep data manipulation (Deep Merge, Hold-Out, ID filter)
+- **LPE (Light Path Expressions)** — custom AOVs via light path expressions (Arnold / RenderMan parity)
 
 ### Long Term
 - **Plugins for DaVinci Resolve Fusion** — DeepID Sampler, Deep Fog, Deep Relight (Nuke workflow parity in Fusion - 'Deep+ Tools' for Fusion)
