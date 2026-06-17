@@ -49,6 +49,21 @@ A full Deep EXR implementation for Cycles, following the **Arnold / RenderMan ar
 
 ---
 
+### <u>Multi-Layer Deep EXR — All Layers in One File</u>
+
+A new **output format** that packs every view layer's deep data into a **single multi-part OpenEXR** — one deep part per view layer. Select it in **Output Properties > Media Type > Multi-Layer Deep EXR**, right next to *Multi-Layer EXR*.
+
+- **One deep part per layer** — each view layer becomes its own deep part (RGBA + Z + ZBack), named after the layer, following the Nuke *one-part-per-layer* convention. No per-layer subfolders.
+- **A true deep file** — it contains *only* deep parts, so Nuke and Fusion read it directly as deep (no flat fallback). The beauty is the deep flatten (DeepToImage / Deep ▸ Flatten).
+- **Single compression** — one codec (None / ZIPS / RLE) for the whole file, set right in the Output panel (these are the only codecs valid for deep data).
+- **Drop-in** — selecting the format automatically enables deep recording.
+
+Need the regular flat passes/AOVs (Diffuse, Normal, Cryptomatte…) too? Render them in parallel as a standard Multi-Layer EXR — the usual VFX split of a *deep file* and an *AOV/beauty render*. Choosing any non-deep output format keeps the previous behavior: a standard flat render **plus** per-layer deep files in `Deep/<layer>/` subfolders.
+
+> **Roadmap — deep AOVs / DeepID.** Embedding the passes *inside* the deep (per-fragment Diffuse, IDs, etc.) requires per-fragment recording — that's the upcoming **DeepID** feature. The format above is the foundation it will build on.
+
+---
+
 ### <u>Z Depth Pass — Antialiased, Volume & Transparency Aware</u>
 
 An upgraded Z depth pass: **antialiased, volume-aware and transparency-aware**. No mode selector — just enable **Depth**. It works with or without Deep EXR.
@@ -130,13 +145,13 @@ Fixed a Cycles bug where volumes placed in **Indirect-Only** collections would n
 | Deep EXR volumes require Unbiased mode | Use Unbiased (delta-tracking). A warning is shown in the panel if Biased is active. |
 | Z Depth is CPU only (GPU rendering crashes Blender) | Use CPU rendering for the Depth pass. GPU port is on the roadmap. |
 | Z Depth: hard edge where a motion-blurred surface is partially in front of a volume | Render surface and volume on separate View Layers, each with a Depth pass, and `min()` them in compositing |
+| Multi-Layer Deep EXR with multi-view (stereo) | Cycles deep is mono — render mono, or use the per-layer deep files for multi-view setups |
 
 ---
 
 ## Roadmap
 
 ### Near Term
-- **Multi-layered Deep EXR** — all layers and deep in one file
 - **Deep EXR & Z-Depth GPU** — port the deep volume raymarch, surface recording, and the antialiased volume-aware Z-Depth to OptiX / CUDA (both are currently CPU only)
 
 ### Medium Term
