@@ -76,12 +76,22 @@ The final `Depth` channel is a **`min(surface, volume)`** combine (*nearest wins
 
 > **Note:** this diverges from stock Blender's Z (non-antialiased, single sample). The output is a true antialiased depth ready for Normalize, defocus, and depth-driven atmospherics.
 >
-> **CPU only** — the antialiased Z-Depth works with **CPU rendering only**. GPU rendering is not yet supported and will **crash Blender**, so use CPU for this pass. A GPU port is on the roadmap.
+> **CPU, CUDA & OptiX — SVM and OSL.** The antialiased volume-aware Z-Depth runs on all three backends, with both **SVM and OSL** volume shaders on GPU. On OptiX, OSL volume shading is resolved through the OSL shade pipeline, so the volume depth is computed natively (no surface-only fallback).
 
 <div align="center">
   <img src="medias/New_Zdepth.png" width="1600"/>
   <p>Cycles New Zdepth with volume in Davinci Resolve - Fusion</p>
 </div>
+
+---
+
+### <u>OSL GPU Group-Data Budget</u>
+
+Open Shading Language shaders allocate a fixed per-thread *group-data* buffer on GPU, capped at **2048 bytes** in stock Blender. Heavy custom OSL graphs can exceed it and fail to load on GPU with a *"group data size"* error.
+
+This build adds an **OSL GPU Group Data** selector in **Render Properties** (shown when *Open Shading Language* is enabled, on CPU or OptiX): from **2048** (default) up to **6144** bytes, in 1024-byte steps. Raising it lets heavier custom OSL graphs render on GPU.
+
+> **Trade-off:** the buffer is reserved per-thread, so a larger budget lowers GPU occupancy and slows down *all* OSL shading in the render. It only affects GPU rendering — OSL on CPU is unlimited. Changing the value recompiles the OSL kernels.
 
 ---
 
@@ -143,7 +153,7 @@ Fixed a Cycles bug where volumes placed in **Indirect-Only** collections would n
 |---|---|
 | Deep EXR is CPU only | GPU port is on the roadmap |
 | Deep EXR volumes require Unbiased mode | Use Unbiased (delta-tracking). A warning is shown in the panel if Biased is active. |
-| Z Depth is CPU only (GPU rendering crashes Blender) | Use CPU rendering for the Depth pass. GPU port is on the roadmap. |
+| Heavy OSL graphs may exceed the GPU group-data budget | Raise the **OSL GPU Group Data** budget in Render Properties (up to 6144), simplify the shader, or render it on CPU (unlimited). |
 | Z Depth: hard edge where a motion-blurred surface is partially in front of a volume | Render surface and volume on separate View Layers, each with a Depth pass, and `min()` them in compositing |
 | Multi-Layer Deep EXR with multi-view (stereo) | Cycles deep is mono — render mono, or use the per-layer deep files for multi-view setups |
 
@@ -152,7 +162,7 @@ Fixed a Cycles bug where volumes placed in **Indirect-Only** collections would n
 ## Roadmap
 
 ### Near Term
-- **Deep EXR & Z-Depth GPU** — port the deep volume raymarch, surface recording, and the antialiased volume-aware Z-Depth to OptiX / CUDA (both are currently CPU only)
+- **Deep EXR GPU** — port the deep volume raymarch and surface recording to OptiX / CUDA (currently CPU only). *(The antialiased volume-aware Z-Depth — now including OptiX + OSL — and the Indirect-Only volume fix already run on CPU, CUDA and OptiX.)*
 
 ### Medium Term
 - **View Layer Attribute Overrides** — per-layer render settings, engine, samples, denoise and material overrides (Maya-style)
