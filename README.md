@@ -4,43 +4,38 @@
 
 # MattRM2 VFX Build
 
-A custom Blender build targeting professional VFX pipelines. Built on top of the official Blender 5.1.2 release, this distribution extends Cycles with features that have been standard in high-end renderers (Arnold, RenderMan) for years but are missing from stock Blender.
+A custom Blender build for professional VFX pipelines. Built on Blender 5.1.2, it extends Cycles with production features long standard in Arnold and RenderMan but missing from stock Blender.
 
-> **Status — Beta**
-> This build is in active testing, professionals and passionate hobbyists alike. Your feedback is welcome and will directly shape what comes next.
+> **Release 1.0** — first stable public release. Feedback from professionals and hobbyists shapes what comes next.
 
-> **Unofficial build.** *MattRM2 VFX Build* is an independent, modified version of Blender, licensed under the **GNU GPL v3**. It is **not** created, sponsored, or endorsed by the Blender Foundation. "Blender" is a trademark of the Blender Foundation — [blender.org](https://www.blender.org).
+> **Unofficial build.** *MattRM2 VFX Build* is an independent, modified version of Blender under the **GNU GPL v3**. It is **not** created, sponsored, or endorsed by the Blender Foundation. "Blender" is a trademark of the Blender Foundation — [blender.org](https://www.blender.org).
 
 ---
 
 ## Why This Build
 
-Blender is a world-class tool, but certain VFX pipeline features remain absent or incomplete for production use. This build focuses on these core gaps for now:
+Blender is world-class, but a few VFX pipeline features are still missing for production. This build closes the core gaps:
 
-- **Deep EXR compositing** — the industry-standard format for high-quality depth compositing (DOF, motion blur, volume integration), not supported in stock Blender Cycles
-- **Z-Depth with volumes** — volumes are now present in a new, antialiased Z-Depth pass
-- **Pipeline path flexibility** — environment variable support in all file paths, including Preferences
-- **Qt Tools (PySide6)** — an extensible, separate-process Qt UI framework for rich pipeline tools, with a Deep EXR control panel as a demo
-- **And more** — see the roadmap at the end
+- **Deep EXR** — industry-standard depth compositing (DOF, motion blur, volumes), on **CPU and GPU**
+- **Z-Depth with volumes** — a new antialiased, volume-aware depth pass
+- **Environment variables** in every file path, Preferences included
+- **Qt Tools (PySide6)** — a separate-process Qt UI framework for pipeline tools
+- **And more** — see the roadmap
 
-The goal is not to diverge from Blender, but to ship production-ready features to artists now, and to upstream fixes and improvements to the official project over time.
+The goal isn't to fork Blender, but to ship production features now and upstream fixes over time.
 
 ---
 
 ## What's New
 
-### <u>Deep EXR — Cycles CPU</u>
+### <u>Deep EXR — Cycles (CPU + GPU)</u>
 
-A full Deep EXR implementation for Cycles, following the **Arnold / RenderMan architecture**:
+A full Deep EXR implementation for Cycles, following the **Arnold / RenderMan architecture** — now on **CPU, CUDA and OptiX (SVM + OSL)**.
 
-- **Surfaces** — recorded per-sample, Motion Blur and Depth of Field preserved naturally. The deep flatten is pixel-perfect identical to the standard flat EXR render.
-- **Volumes** — Arnold-style single-ray raymarch per pixel. Multiple and overlapping volumes on the same render layer are fully supported.
-- **Output** — standard OpenEXR deep scanline format, readable by Nuke, Fusion, Resolve, and any OpenEXR-compliant compositor.
-- **Per-view-layer output** — each view layer gets its own subfolder and filename prefix automatically.
-
-> **Note — CPU only in this release.** GPU (OptiX/CUDA) port is on the roadmap.
->
-> **Volumes require Unbiased mode** (delta-tracking). A warning is shown in the panel if Biased volume is active.
+- **Surfaces** — per-sample recording; Motion Blur and Depth of Field preserved. The deep flatten is pixel-identical to the flat EXR.
+- **Volumes** — Arnold-style raymarch, with **Depth of Field and Motion Blur** support. Multiple and overlapping volumes on one layer are handled.
+- **Output** — standard OpenEXR deep scanline, read by Nuke, Fusion, Resolve, and any OpenEXR compositor.
+- **Per-view-layer output** — each layer gets its own subfolder and filename prefix.
 
 <div align="center">
   <img src="medias/Deep_002.png" width="1600"/>
@@ -51,32 +46,29 @@ A full Deep EXR implementation for Cycles, following the **Arnold / RenderMan ar
 
 ### <u>Multi-Layer Deep EXR — All Layers in One File</u>
 
-A new **output format** that packs every view layer's deep data into a **single multi-part OpenEXR** — one deep part per view layer. Select it in **Output Properties > Media Type > Multi-Layer Deep EXR**, right next to *Multi-Layer EXR*.
+An **output format** that packs every view layer's deep into a **single multi-part OpenEXR** — one deep part per layer. Select it in **Output > Media Type > Multi-Layer Deep EXR**.
 
-- **One deep part per layer** — each view layer becomes its own deep part (RGBA + Z + ZBack), named after the layer, following the Nuke *one-part-per-layer* convention. No per-layer subfolders.
-- **A true deep file** — it contains *only* deep parts, so Nuke and Fusion read it directly as deep (no flat fallback). The beauty is the deep flatten (DeepToImage / Deep ▸ Flatten).
-- **Single compression** — one codec (None / ZIPS / RLE) for the whole file, set right in the Output panel (these are the only codecs valid for deep data).
-- **Drop-in** — selecting the format automatically enables deep recording.
+- **One deep part per layer** (RGBA + Z + ZBack), named after the layer. No subfolders.
+- **A true deep file** — deep parts only; the beauty is the deep flatten (DeepToImage).
+- **Single codec** for the whole file (None / ZIPS / RLE — the deep-valid codecs), set in the Output panel.
+- **Per-layer stats** — `cycles.<layer>.samples` / `render_time` written per layer, like a flat multi-layer EXR.
+- **Drop-in** — selecting the format enables deep recording.
 
-Need the regular flat passes/AOVs (Diffuse, Normal, Cryptomatte…) too? Render them in parallel as a standard Multi-Layer EXR — the usual VFX split of a *deep file* and an *AOV/beauty render*. Choosing any non-deep output format keeps the previous behavior: a standard flat render **plus** per-layer deep files in `Deep/<layer>/` subfolders.
+> **Compositor note.** **Blackmagic Fusion / DaVinci Resolve read every deep part** — all layers from one file, a real convenience there. **Nuke reads only the first deep part** (its DeepRead handles one part per read); for isolated per-layer deep in Nuke, use the standard output, which writes one deep file per layer in `Deep/<layer>/`.
 
-> **Roadmap — deep AOVs / DeepID.** Embedding the passes *inside* the deep (per-fragment Diffuse, IDs, etc.) requires per-fragment recording — that's the upcoming **DeepID** feature. The format above is the foundation it will build on.
+> **Roadmap — DeepID.** Single-file per-layer isolation in Nuke — and per-fragment IDs/AOVs inside the deep — is the upcoming **DeepID** feature.
 
 ---
 
 ### <u>Z Depth Pass — Antialiased, Volume & Transparency Aware</u>
 
-An upgraded Z depth pass: **antialiased, volume-aware and transparency-aware**. No mode selector — just enable **Depth**. It works with or without Deep EXR.
+An upgraded Z depth: **antialiased, volume-aware and transparency-aware**. No mode selector — just enable **Depth**. Works with or without Deep EXR, on **CPU, CUDA and OptiX (SVM + OSL)**.
 
-The final `Depth` channel is a **`min(surface, volume)`** combine (*nearest wins*), immune to the over-bright that an alpha-over depth produces under motion blur and depth of field.
+The `Depth` channel is a **`min(surface, volume)`** combine (*nearest wins*), immune to the over-bright of an alpha-over depth under motion blur and depth of field.
 
-- **Antialiased** — coverage-weighted per-sample depth, smooth edges instead of the hard single-sample Z of stock Blender.
-- **Volume & transparency aware** — volumes and semi-transparent surfaces contribute correctly; low-opacity volumes (wispy smoke) blend toward the background instead of pulling the depth to the front.
-- **Clean background** — empty pixels are filled with the maximum scene depth, so a **Normalize** node maps the whole frame cleanly (no `1e10` spike).
-
-> **Note:** this diverges from stock Blender's Z (non-antialiased, single sample). The output is a true antialiased depth ready for Normalize, defocus, and depth-driven atmospherics.
->
-> **CPU, CUDA & OptiX — SVM and OSL.** The antialiased volume-aware Z-Depth runs on all three backends, with both **SVM and OSL** volume shaders on GPU. On OptiX, OSL volume shading is resolved through the OSL shade pipeline, so the volume depth is computed natively (no surface-only fallback).
+- **Antialiased** — coverage-weighted per-sample depth, smooth edges instead of stock Blender's hard single-sample Z.
+- **Volume & transparency aware** — volumes and semi-transparent surfaces contribute correctly; wispy smoke blends toward the background instead of pulling depth to the front.
+- **Clean background** — empty pixels filled with max scene depth, so a **Normalize** node maps the whole frame cleanly (no `1e10` spike).
 
 <div align="center">
   <img src="medias/New_Zdepth.png" width="1600"/>
@@ -87,17 +79,21 @@ The final `Depth` channel is a **`min(surface, volume)`** combine (*nearest wins
 
 ### <u>OSL GPU Group-Data Budget</u>
 
-Open Shading Language shaders allocate a fixed per-thread *group-data* buffer on GPU, capped at **2048 bytes** in stock Blender. Heavy custom OSL graphs can exceed it and fail to load on GPU with a *"group data size"* error.
+OSL shaders use a fixed per-thread *group-data* buffer on GPU, capped at **2048 bytes** in stock Blender — heavy custom graphs can exceed it and fail to load. This build adds an **OSL GPU Group Data** selector in **Render Properties** (shown when *Open Shading Language* is enabled): from **2048** (default) up to **6144** bytes, in 1024-byte steps.
 
-This build adds an **OSL GPU Group Data** selector in **Render Properties** (shown when *Open Shading Language* is enabled, on CPU or OptiX): from **2048** (default) up to **6144** bytes, in 1024-byte steps. Raising it lets heavier custom OSL graphs render on GPU.
+> **Trade-off:** the buffer is reserved per-thread, so a larger budget lowers GPU occupancy and slows *all* OSL shading. GPU only — OSL on CPU is unlimited. Changing it recompiles the OSL kernels.
 
-> **Trade-off:** the buffer is reserved per-thread, so a larger budget lowers GPU occupancy and slows down *all* OSL shading in the render. It only affects GPU rendering — OSL on CPU is unlimited. Changing the value recompiles the OSL kernels.
+---
+
+### <u>Render Devices in the Render Panel</u>
+
+The Cycles **Device** panel (Render Properties) now shows the **render devices directly** when GPU is selected — the backend (CUDA / OptiX / HIP / oneAPI) and the per-device checkboxes, mirrored from Preferences. Switch backend or pick which GPUs to render on without leaving the render settings.
 
 ---
 
 ### <u>Environment Variables in File Paths</u>
 
-File paths anywhere in Blender (render output, textures, libraries, caches) now support environment variable expansion:
+Every file path (render output, textures, libraries, caches) supports environment variable expansion:
 
 ```
 $MY_PROJECT/renders/####.exr
@@ -105,7 +101,7 @@ ${SHOT_DIR}/textures/diffuse.png
 %PIPELINE_ROOT%/assets/char.blend
 ```
 
-All three syntaxes are supported cross-platform. Variables are expanded at path resolution time, so `.blend` files remain portable across machines with different local configurations.
+All three syntaxes, cross-platform, expanded at resolution time — so `.blend` files stay portable across machines.
 
 <div align="center">
   <img src="medias/Environement_Variables_001.png" width="1600"/>
@@ -116,21 +112,21 @@ All three syntaxes are supported cross-platform. Variables are expanded at path 
 
 ### <u>Qt Tools (PySide6)</u>
 
-A built-in framework to run **rich Qt (PySide6) UIs in their own process**, fully isolated from Blender — no freezes, always-on-top, and live two-way sync with Blender data. The **MattRM2 Qt Bridge** ships and auto-loads; tools are tiny scripts built on a shared SDK.
+A framework to run **rich Qt (PySide6) UIs in their own process**, isolated from Blender — no freezes, always-on-top, live two-way sync with Blender data. The **MattRM2 Qt Bridge** ships and auto-loads; tools are tiny scripts on a shared SDK.
 
-A **Deep EXR control panel** is included as a demo — enable *MattRM2 — Deep EXR Panel (Qt demo)* in **Preferences > Add-ons**, then open it from the **MattRM2 Qt** tab in the N-panel.
+A **Deep EXR control panel** ships as a demo — enable *MattRM2 — Deep EXR Panel (Qt demo)* in **Preferences > Add-ons**, then open it from the **MattRM2 Qt** tab in the N-panel.
 
-> **For developers** — building a custom tool is ~25 lines: declare a layout of Blender property paths and the SDK builds the widgets and handles the IPC. See the documentation for the SDK guide.
+> **For developers** — a custom tool is ~25 lines: declare a layout of Blender property paths and the SDK builds the widgets and handles the IPC. See the documentation for the SDK guide.
 
 ---
 
 ## Bugfix
 
 ### <u>Node Editor Click-Drag</u>
-Fixed an official Blender 5.1 bug where click-dragging a node would move a different node than the one under the cursor — the incorrect selection persisted in the `.blend` file. Included ahead of the upstream patch.
+Fixed an official Blender 5.1 bug where click-dragging a node moved a different node than the one under the cursor — the wrong selection persisted in the `.blend`. Included ahead of the upstream patch.
 
 ### <u>Volume Indirect-Only Shadows</u>
-Fixed a Cycles bug where volumes placed in **Indirect-Only** collections would not cast shadows on surrounding surfaces. In particular, when the volume's bounding box intersected the floor or another object, the shadow disappeared on the intersecting surface in this mode (most visible in Unbiased mode).
+Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadows — on surfaces whose geometry meets the volume's bounding box, and on other volumes (volume-on-volume). Correct on **CPU, CUDA and OptiX**.
 
 <div align="center">
   <table>
@@ -151,29 +147,25 @@ Fixed a Cycles bug where volumes placed in **Indirect-Only** collections would n
 
 | Issue | Workaround |
 |---|---|
-| Deep EXR is CPU only | GPU port is on the roadmap |
-| Deep EXR volumes require Unbiased mode | Use Unbiased (delta-tracking). A warning is shown in the panel if Biased is active. |
-| Heavy OSL graphs may exceed the GPU group-data budget | Raise the **OSL GPU Group Data** budget in Render Properties (up to 6144), simplify the shader, or render it on CPU (unlimited). |
-| Z Depth: hard edge where a motion-blurred surface is partially in front of a volume | Render surface and volume on separate View Layers, each with a Depth pass, and `min()` them in compositing |
-| Multi-Layer Deep EXR with multi-view (stereo) | Cycles deep is mono — render mono, or use the per-layer deep files for multi-view setups |
+| GPU deep uses a per-pixel layer cap (CPU is unlimited) | **Max Depth** `-1` (default) maps to 96 on GPU; set it higher in the Deep EXR panel for very dense volumes. |
+| Multi-Layer Deep EXR: Nuke reads only the first deep part | It's a Fusion / Resolve format; for Nuke, use the standard per-layer deep files (`Deep/<layer>/`). |
+| Deep EXR + Shadow Catcher | Shadow catcher is not yet recorded in the deep. Render the shadow catcher pass separately (flat) for now. |
+| Multi-Layer Deep EXR with multi-view (stereo) | Cycles deep is mono — render mono, or use the per-layer deep files. |
+| Z Depth: hard edge where a motion-blurred surface is partly in front of a volume | Render surface and volume on separate View Layers, each with Depth, and `min()` them in compositing. |
 
 ---
 
 ## Roadmap
 
-### Near Term
-- **Deep EXR GPU** — port the deep volume raymarch and surface recording to OptiX / CUDA (currently CPU only). *(The antialiased volume-aware Z-Depth — now including OptiX + OSL — and the Indirect-Only volume fix already run on CPU, CUDA and OptiX.)*
-
 ### Medium Term
 - **View Layer Attribute Overrides** — per-layer render settings, engine, samples, denoise and material overrides (Maya-style)
-- **DeepID** — extend deep channels with `objectId`, `materialId`, `normal`, `albedo` per fragment
-- **Deep + DeepID Compositor Nodes** — native Blender compositing nodes for deep data manipulation (Deep Merge, Hold-Out, ID filter)
+- **DeepID** — per-fragment `objectId`, `materialId`, `normal`, `albedo`, plus single-file per-layer isolation in Nuke
+- **Deep + DeepID Compositor Nodes** — native Blender deep nodes (Deep Merge, Hold-Out, ID filter)
 - **LPE (Light Path Expressions)** — custom AOVs via light path expressions (Arnold / RenderMan parity)
 
 ### Long Term
-- **Plugins for DaVinci Resolve Fusion** — DeepID Sampler, Deep Fog, Deep Relight (Nuke workflow parity in Fusion - 'Deep+ Tools' for Fusion)
+- **DaVinci Resolve Fusion plugins** — DeepID Sampler, Deep Fog, Deep Relight ('Deep+ Tools' for Fusion)
 - **Caustics** — fast accurate caustics (Photon Map / guided raymarcher)
-- **Fix limitation Volume Unbiased** — Add deep working with biased volume
 - **R&D for heavy production scenes** — Top Secret right now
 
 ---
@@ -186,15 +178,15 @@ Fixed a Cycles bug where volumes placed in **Indirect-Only** collections would n
 | **Branch** | `blender-v5.1-custom` |
 | **Platform** | Windows x64 |
 | **Compiler** | MSVC 2022 (vc17) |
-| **OptiX** | 8.0.0 |
+| **GPU** | CUDA 12.8 · OptiX 9.1 |
 
 ---
 
 ## Feedback
 
-This build is in active development. If you encounter unexpected behavior, crashes, or rendering differences vs. stock Blender, please report with:
-- `.blend` file or minimal reproduction scene
-- Render settings (samples, volume mode, Deep EXR settings)
+Actively developed. If you hit unexpected behavior, crashes, or rendering differences vs. stock Blender, please report with:
+- a `.blend` or minimal reproduction scene
+- render settings (samples, volume mode, Deep EXR settings)
 - OS and GPU
 
 Your feedback directly influences what gets built next.
