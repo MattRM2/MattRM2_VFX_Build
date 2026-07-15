@@ -17,6 +17,7 @@ A custom Blender build for professional VFX pipelines. Built on Blender 5.1.2, i
 Blender is world-class, but a few VFX pipeline features are still missing for production. This build closes the core gaps:
 
 - **Deep EXR** — industry-standard depth compositing (DOF, motion blur, volumes), on **CPU and GPU**
+- **View Layer Overrides** — Maya-style per-render-layer attribute overrides, up to the **render engine per layer**
 - **Z-Depth with volumes** — a new antialiased, volume-aware depth pass
 - **Environment variables** in every file path, Preferences included
 - **Qt Tools (PySide6)** — a separate-process Qt UI framework for pipeline tools
@@ -28,13 +29,59 @@ The goal isn't to fork Blender, but to ship production features now and upstream
 
 ## What's New
 
+### <u>View Layer Attribute Overrides — Maya-Style Render Layers</u>
+
+Override almost **any property per view layer** — the workflow of Maya's Render Setup, native in Blender. Right-click a property, **Add Layer Override**, and that layer gets its own value; every other layer keeps the base one.
+
+- **Right-click workflow** — *Add / Remove Layer Override* on object, light and camera attributes, shader node sockets, and render settings. Overridden properties show a **bold orange label**, and editing them only changes the active layer.
+- **Per-layer render engine** — override `Render Engine` itself: one scene can render some layers with **Cycles and others with EEVEE in the same F12**, into the same multilayer EXR. The viewport and the whole render UI follow the active layer's engine.
+- **Per-layer samples** — override *Max Samples* per layer: 4096 on the hero layer, 64 on a matte layer, in one render.
+- **Per-layer shaders** — override any node socket (a *Mix Shader* factor becomes a per-layer shader switch), with the **material preview** following the active layer.
+- **Fully integrated** — values persist in the `.blend`, the color picker / eyedropper / copy-paste / tooltips all read and write the per-layer value, and panels grey in/out per layer.
+
+<div align="center">
+  <img src="medias/Overrides_menu.png" width="1600"/>
+  <p>Right-click any property — Add Layer Override</p>
+</div>
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><img src="medias/Overrides_Styling_Before.png" width="480"/></td>
+      <td align="center"><img src="medias/Overrides_Styling_After.png" width="480"/></td>
+    </tr>
+    <tr>
+      <td align="center"><b>Before</b> — base properties, shared by all layers</td>
+      <td align="center"><b>After</b> — per-layer overrides active: bold orange labels, layer-local values</td>
+    </tr>
+  </table>
+</div>
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><img src="medias/Overrides_Engine_layer_01.png" width="480"/></td>
+      <td align="center"><img src="medias/Overrides_Engine_layer_02.png" width="480"/></td>
+    </tr>
+    <tr>
+      <td align="center"><b>View Layer 01</b> — scene engine (Cycles)</td>
+      <td align="center"><b>View Layer 02</b> — engine overridden to EEVEE: the whole render UI and the viewport follow</td>
+    </tr>
+  </table>
+</div>
+
+> Pipeline-geometry settings (resolution, borders, frame range, output paths/format) are deliberately **not overridable**: they are locked per scene so the multilayer EXR stays consistent. Per-layer file output is on the roadmap.
+
+---
+
 ### <u>Deep EXR — Cycles (CPU + GPU)</u>
 
 A full Deep EXR implementation for Cycles, following the **Arnold / RenderMan architecture** — now on **CPU, CUDA and OptiX (SVM + OSL)**.
 
 - **Surfaces** — per-sample recording; Motion Blur and Depth of Field preserved. The deep flatten is pixel-identical to the flat EXR.
 - **Volumes** — Arnold-style raymarch, with **Depth of Field and Motion Blur** support. Multiple and overlapping volumes on one layer are handled.
-- **Output** — standard OpenEXR deep scanline, read by Nuke, Fusion, Resolve, and any OpenEXR compositor.
+- **Shadow catcher** — the catcher is recorded in the deep as a **shadow matte** (black RGB, shadow-density alpha), ready to deep-merge over footage — including catchers seen behind or through volumes.
+- **Output** — standard OpenEXR deep scanline, read by Nuke, Fusion, Resolve, and any OpenEXR compositor. Single-layer deep files carry the **view layer name** as their part name.
 - **Per-view-layer output** — each layer gets its own subfolder and filename prefix.
 
 <div align="center">
@@ -149,8 +196,9 @@ Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadow
 |---|---|
 | GPU deep uses a per-pixel layer cap (CPU is unlimited) | **Max Depth** `-1` (default) maps to 96 on GPU; set it higher in the Deep EXR panel for very dense volumes. |
 | Multi-Layer Deep EXR: Nuke reads only the first deep part | It's a Fusion / Resolve format; for Nuke, use the standard per-layer deep files (`Deep/<layer>/`). |
-| Deep EXR + Shadow Catcher | Shadow catcher is not yet recorded in the deep. Render the shadow catcher pass separately (flat) for now. |
 | Multi-Layer Deep EXR with multi-view (stereo) | Cycles deep is mono — render mono, or use the per-layer deep files. |
+| View Layer Overrides: resolution, borders, frame range and output path/format cannot be overridden | By design — these are read once per render by the pipeline. Use the compositor File Output node for per-layer outputs (native per-layer output is on the roadmap). |
+| View Layer Overrides: animated or driven properties cannot be overridden | By design — an override and an F-Curve would fight over the value. Remove the animation first, or drive the property per layer another way. |
 | Z Depth: hard edge where a motion-blurred surface is partly in front of a volume | Render surface and volume on separate View Layers, each with Depth, and `min()` them in compositing. |
 
 ---
@@ -158,7 +206,6 @@ Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadow
 ## Roadmap
 
 ### Medium Term
-- **View Layer Attribute Overrides** — per-layer render settings, engine, samples, denoise and material overrides (Maya-style)
 - **DeepID** — per-fragment `objectId`, `materialId`, `normal`, `albedo`, plus single-file per-layer isolation in Nuke
 - **Deep + DeepID Compositor Nodes** — native Blender deep nodes (Deep Merge, Hold-Out, ID filter)
 - **LPE (Light Path Expressions)** — custom AOVs via light path expressions (Arnold / RenderMan parity)
