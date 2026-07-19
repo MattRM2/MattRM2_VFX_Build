@@ -4,7 +4,7 @@
 
 # MattRM2 VFX Build
 
-A custom Blender build for professional VFX pipelines. Built on Blender 5.1.2, it extends Cycles with production features long standard in Arnold and RenderMan but missing from stock Blender.
+A custom Blender build for professional VFX pipelines. Built on Blender 5.2.2 LTS, it extends Cycles with production features long standard in Arnold and RenderMan but missing from stock Blender.
 
 > **Release 1.0** — first stable public release. Feedback from professionals and hobbyists shapes what comes next.
 
@@ -70,7 +70,7 @@ Override almost **any property per view layer** — the workflow of Maya's Rende
   </table>
 </div>
 
-> Pipeline-geometry settings (resolution, borders, frame range, output paths/format) are deliberately **not overridable**: they are locked per scene so the multilayer EXR stays consistent. Per-layer file output is on the roadmap.
+> Pipeline-geometry settings (resolution, borders, frame range, output paths/format) are deliberately **not overridable**: they are locked per scene so the multilayer EXR stays consistent. Use the compositor File Output node for per-layer outputs.
 
 ---
 
@@ -83,6 +83,8 @@ A full Deep EXR implementation for Cycles, following the **Arnold / RenderMan ar
 - **Shadow catcher** — the catcher is recorded in the deep as a **shadow matte** (black RGB, shadow-density alpha), ready to deep-merge over footage — including catchers seen behind or through volumes.
 - **Output** — standard OpenEXR deep scanline, read by Nuke, Fusion, Resolve, and any OpenEXR compositor. Single-layer deep files carry the **view layer name** as their part name.
 - **Per-view-layer output** — each layer gets its own subfolder and filename prefix.
+
+> **Disable Noise Threshold for deep.** Adaptive sampling (Sampling > Render > *Noise Threshold*) stops pixels at different sample counts, which breaks deep fragment accumulation — the deep output will be wrong. Set Noise Threshold to `0` and render deep with a fixed sample count. Expected, not a bug.
 
 <div align="center">
   <img src="medias/Deep_002.png" width="1600"/>
@@ -128,13 +130,13 @@ The `Depth` channel is a **`min(surface, volume)`** combine (*nearest wins*), im
 
 OSL shaders use a fixed per-thread *group-data* buffer on GPU, capped at **2048 bytes** in stock Blender — heavy custom graphs can exceed it and fail to load. This build adds an **OSL GPU Group Data** selector in **Render Properties** (shown when *Open Shading Language* is enabled): from **2048** (default) up to **6144** bytes, in 1024-byte steps.
 
-> **Trade-off:** the buffer is reserved per-thread, so a larger budget lowers GPU occupancy and slows *all* OSL shading. GPU only — OSL on CPU is unlimited. Changing it recompiles the OSL kernels.
+> **Trade-off:** the buffer is reserved per-thread, so a larger budget lowers GPU occupancy and slows *all* OSL shading. GPU only — OSL on CPU is unlimited. Changing it recompiles the OSL kernels. The `CYCLES_OSL_GROUPDATA_ALLOC` environment variable overrides the menu for advanced setups.
 
 ---
 
 ### <u>Render Devices in the Render Panel</u>
 
-The Cycles **Device** panel (Render Properties) now shows the **render devices directly** when GPU is selected — the backend (CUDA / OptiX / HIP / oneAPI) and the per-device checkboxes, mirrored from Preferences. Switch backend or pick which GPUs to render on without leaving the render settings.
+The Cycles **Device** panel (Render Properties) now shows the **render devices directly** when GPU is selected — the backend (CUDA / OptiX / HIP / oneAPI) and the per-device checkboxes, mirrored from Preferences. Switch backend or pick which GPUs to render on without leaving the render settings. As a rule of thumb: **CUDA** for volumes / Deep EXR / XPU (reference path, and it matches OptiX within a few percent on volume-heavy scenes), **OptiX** for heavy geometry, hair/fur, or GPU OSL (OSL on GPU is OptiX-only).
 
 ---
 
@@ -170,7 +172,7 @@ A **Deep EXR control panel** ships as a demo — enable *MattRM2 — Deep EXR Pa
 ## Bugfix
 
 ### <u>Node Editor Click-Drag</u>
-Fixed an official Blender 5.1 bug where click-dragging a node moved a different node than the one under the cursor — the wrong selection persisted in the `.blend`. Included ahead of the upstream patch.
+Fixed a Blender bug (still present in official 5.2.2) where click-dragging a node moved a different node than the one under the cursor — the wrong selection persisted in the `.blend`. Included ahead of the upstream patch.
 
 ### <u>Volume Indirect-Only Shadows</u>
 Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadows — on surfaces whose geometry meets the volume's bounding box, and on other volumes (volume-on-volume). Correct on **CPU, CUDA and OptiX**.
@@ -182,7 +184,7 @@ Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadow
       <td align="center"><img src="medias/Volume_Indirect_Only_After.png" width="480"/></td>
     </tr>
     <tr>
-      <td align="center"><b>Before</b> — stock Blender 5.1.2: no shadow where the bounding box meets the floor</td>
+      <td align="center"><b>Before</b> — stock Blender 5.2.2: no shadow where the bounding box meets the floor</td>
       <td align="center"><b>After</b> — this build: shadow cast correctly</td>
     </tr>
   </table>
@@ -194,26 +196,29 @@ Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadow
 
 | Issue | Workaround |
 |---|---|
+| Deep EXR is incompatible with **Noise Threshold** (adaptive sampling) | Adaptive sampling stops pixels at different sample counts, breaking deep accumulation. Set Noise Threshold to `0` and use a fixed sample count. Expected, not a bug. |
 | GPU deep uses a per-pixel layer cap (CPU is unlimited) | **Max Depth** `-1` (default) maps to 96 on GPU; set it higher in the Deep EXR panel for very dense volumes. |
 | Multi-Layer Deep EXR: Nuke reads only the first deep part | It's a Fusion / Resolve format; for Nuke, use the standard per-layer deep files (`Deep/<layer>/`). |
 | Multi-Layer Deep EXR with multi-view (stereo) | Cycles deep is mono — render mono, or use the per-layer deep files. |
-| View Layer Overrides: resolution, borders, frame range and output path/format cannot be overridden | By design — these are read once per render by the pipeline. Use the compositor File Output node for per-layer outputs (native per-layer output is on the roadmap). |
+| View Layer Overrides: resolution, borders, frame range and output path/format cannot be overridden | By design — these are read once per render by the pipeline. Use the compositor File Output node for per-layer outputs — full control over per-layer paths and formats. |
 | View Layer Overrides: animated or driven properties cannot be overridden | By design — an override and an F-Curve would fight over the value. Remove the animation first, or drive the property per layer another way. |
-| Z Depth: hard edge where a motion-blurred surface is partly in front of a volume | Render surface and volume on separate View Layers, each with Depth, and `min()` them in compositing. |
+| Z Depth: hard edge where a motion-blurred surface is partly in front of a volume | Split only the **Depth**: render surface and volume on separate View Layers, each with Depth, and `min()` the two depths in compositing. The color / beauty pass can keep both surface and volume together. |
+| Multi-device (XPU) + OptiX: a camera-visible Indirect-Only volume over a Shadow Catcher can leave a faint CPU/GPU seam in the Shadow Catcher pass | Render such shots on **CUDA** (fully consistent), or set the volume camera-invisible. Does not affect CUDA XPU, pure OptiX, or any other pass. |
 
 ---
 
 ## Roadmap
 
-### Medium Term
-- **DeepID** — per-fragment `objectId`, `materialId`, `normal`, `albedo`, plus single-file per-layer isolation in Nuke
-- **Deep + DeepID Compositor Nodes** — native Blender deep nodes (Deep Merge, Hold-Out, ID filter)
-- **LPE (Light Path Expressions)** — custom AOVs via light path expressions (Arnold / RenderMan parity)
+Planned by version — order and scope may shift as development progresses.
 
-### Long Term
-- **DaVinci Resolve Fusion plugins** — DeepID Sampler, Deep Fog, Deep Relight ('Deep+ Tools' for Fusion)
-- **Caustics** — fast accurate caustics (Photon Map / guided raymarcher)
-- **R&D for heavy production scenes** — Top Secret right now
+| Version | Planned |
+|---|---|
+| **v1.1** | **Deep compositing node** (native Blender deep node) + **deep output support in the Compositing EXR writer** |
+| **v1.2** | **DeepID** — per-fragment `objectId`, `materialId`, `normal`, `albedo` — plus a **DeepID compositing node** |
+| **v1.3** | **LPE (Light Path Expressions)** — custom AOVs (Arnold / RenderMan parity) |
+| **v1.4** | **Advanced caustics** — a fast, accurate caustics engine, tracing through volumes |
+| **v1.5** | **USD stage** — Universal Scene Description stage support |
+| **v1.6** | **Scene management** — Gaffer HQ / Katana-style manager for the USD stage, Alembic and Blender data (in design) |
 
 ---
 
@@ -221,8 +226,8 @@ Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadow
 
 | | |
 |---|---|
-| **Base** | Blender 5.1.2 (official release) |
-| **Branch** | `blender-v5.1-custom` |
+| **Base** | Blender 5.2.2 LTS (official release) |
+| **Branch** | `blender-v5.2-custom` |
 | **Platform** | Windows x64 |
 | **Compiler** | MSVC 2022 (vc17) |
 | **GPU** | CUDA 12.8 · OptiX 9.1 |
