@@ -6,7 +6,7 @@
 
 A custom Blender build for professional VFX pipelines. Built on Blender 5.2.2 LTS, it extends Cycles with production features long standard in Arnold and RenderMan but missing from stock Blender.
 
-> **Release 1.0** — first stable public release. Feedback from professionals and hobbyists shapes what comes next.
+> **Release 1.0.1** — maintenance release: reworked Z Depth pass (locked Near/Far, Normalize, volume depth composited against the surface behind it rather than against the range) and several deep volume fixes, including camera-inside-volume and the end of a silent truncation on dense volumes. Feedback from professionals and hobbyists shapes what comes next.
 
 > **Unofficial build.** *MattRM2 VFX Build* is an independent, modified version of Blender under the **GNU GPL v3**. It is **not** created, sponsored, or endorsed by the Blender Foundation. "Blender" is a trademark of the Blender Foundation — [blender.org](https://www.blender.org).
 
@@ -79,7 +79,8 @@ Override almost **any property per view layer** — the workflow of Maya's Rende
 A full Deep EXR implementation for Cycles, following the **Arnold / RenderMan architecture** — now on **CPU, CUDA and OptiX (SVM + OSL)**.
 
 - **Surfaces** — per-sample recording; Motion Blur and Depth of Field preserved. The deep flatten is pixel-identical to the flat EXR.
-- **Volumes** — Arnold-style raymarch, with **Depth of Field and Motion Blur** support. Multiple and overlapping volumes on one layer are handled.
+- **Volumes** — Arnold-style raymarch, with **Depth of Field and Motion Blur** support. Multiple and overlapping volumes on one layer are handled, and the **camera may sit inside a volume** (fly-throughs record correctly).
+- **Budget-aware** — the per-pixel volume fragment budget can never truncate a volume: the march spreads its fragments across the whole span instead of dropping the far ones. If a budget is ever exceeded anyway, the **Deep EXR panel raises a red warning** and a render report lands in the status bar.
 - **Shadow catcher** — the catcher is recorded in the deep as a **shadow matte** (black RGB, shadow-density alpha), ready to deep-merge over footage — including catchers seen behind or through volumes.
 - **Output** — standard OpenEXR deep scanline, read by Nuke, Fusion, Resolve, and any OpenEXR compositor. Single-layer deep files carry the **view layer name** as their part name.
 - **Per-view-layer output** — each layer gets its own subfolder and filename prefix.
@@ -113,11 +114,14 @@ An **output format** that packs every view layer's deep into a **single multi-pa
 
 An upgraded Z depth: **antialiased, volume-aware and transparency-aware**. No mode selector — just enable **Depth**. Works with or without Deep EXR, on **CPU, CUDA and OptiX (SVM + OSL)**.
 
-The `Depth` channel is a **`min(surface, volume)`** combine (*nearest wins*), immune to the over-bright of an alpha-over depth under motion blur and depth of field.
-
+- **Near / Far / Normalize, per view layer** — under the **Depth** toggle, mirroring the Mist workflow. `Far` is the value written to empty pixels; **Normalize** remaps `[Near, Far]` into 0–1. In raw mode the pass keeps scene units and geometry beyond Far is **not** clamped.
+- **Stable across an animation** — because the range is locked by hand rather than derived from the frame, a distant object entering or leaving the shot no longer shifts every semi-transparent pixel. This matters as soon as a depth-driven defocus is in the comp.
 - **Antialiased** — coverage-weighted per-sample depth, smooth edges instead of stock Blender's hard single-sample Z.
-- **Volume & transparency aware** — volumes and semi-transparent surfaces contribute correctly; wispy smoke blends toward the background instead of pulling depth to the front.
-- **Clean background** — empty pixels filled with max scene depth, so a **Normalize** node maps the whole frame cleanly (no `1e10` spike).
+- **Volume & transparency aware** — a volume is alpha-over composited against the **measured surface behind that pixel**, so wispy smoke reads at a weighted depth. The result does not depend on the Far setting.
+- **Marched at the volume's own Step Rate** — the same value the render marches with, so the pass resolves whatever the render resolves. No extra setting.
+- **Visible in the viewport** — *Depth* is listed in the viewport Render Pass menu (readable with Normalize enabled).
+
+> **Setting Far.** Far is not just a display range — it is the **declared depth of the background**. Anything seen through to the world reads at Far, so a volume floating beyond Far over empty background is pinned to it. Real geometry, and volumes composited against it, are not clamped in raw mode. Set Far beyond the farthest thing you care about; too large and everything is squeezed into the bottom of the range, reading dark and low-contrast. Default is **100 m**.
 
 <div align="center">
   <img src="medias/New_Zdepth.png" width="1600"/>
@@ -197,7 +201,11 @@ Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadow
 | Issue | Workaround |
 |---|---|
 | Deep EXR is incompatible with **Noise Threshold** (adaptive sampling) | Adaptive sampling stops pixels at different sample counts, breaking deep accumulation. Set Noise Threshold to `0` and use a fixed sample count. Expected, not a bug. |
-| GPU deep uses a per-pixel layer cap (CPU is unlimited) | **Max Depth** `-1` (default) maps to 96 on GPU; set it higher in the Deep EXR panel for very dense volumes. |
+| GPU deep uses a per-pixel layer cap (CPU is unlimited) | **Max Depth** `-1` (default) maps to 96 on GPU, and can be raised to 1024. The march never truncates: past the budget it coarsens instead, so the volume stays complete with thicker slabs. Raise Max Depth when a shot needs finer depth resolution. |
+| CPU and GPU deep are not bit-identical | The CPU recorder is unbounded; on GPU the march coarsens to fit the per-pixel budget. Same opacities, thicker slabs. Render on CPU if a shot needs the finest possible slabs. |
+| Deep looks different in lightweight EXR viewers | Validate deep output in **DaVinci Resolve / Fusion or Nuke**. Some viewers show a discrepancy on deep files that a real deep compositor does not. |
+| Per-pixel alpha in the deep differs slightly from the beauty (about ±0.05, averaging out) | Expected: the deep's alpha comes from a deterministic march, the beauty converges stochastically. Raise **Max Depth** for a finer march if a shot needs it. |
+| A volume straddling an opaque surface still contributes from its hidden part | The march does not clip at surfaces. In practice self-limiting — dense volumes saturate before the occluder — and always bounded by the nearest surface depth. |
 | Multi-Layer Deep EXR: Nuke reads only the first deep part | It's a Fusion / Resolve format; for Nuke, use the standard per-layer deep files (`Deep/<layer>/`). |
 | Multi-Layer Deep EXR with multi-view (stereo) | Cycles deep is mono — render mono, or use the per-layer deep files. |
 | View Layer Overrides: resolution, borders, frame range and output path/format cannot be overridden | By design — these are read once per render by the pipeline. Use the compositor File Output node for per-layer outputs — full control over per-layer paths and formats. |
