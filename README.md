@@ -31,7 +31,7 @@ The goal isn't to fork Blender, but to ship production features now and upstream
 
 ## The Rename — and Why Nothing Else Changed
 
-Until 1.0.1 this build shipped as `blender.exe`, under Blender's name, icons and logo. That was never right: the Blender name and logo are **trademarks of the Blender Foundation**, and they are explicitly *excluded* from the GNU GPL. The GPL grants the right to modify and redistribute the **code** — it grants nothing over the **brand**. Shipping a modified Blender under Blender's own identity blurs the line between an official release and this one, which is exactly what trademark law exists to prevent.
+Until 1.0.0 this build shipped as `blender.exe`, under Blender's name, icons and logo. That was never right: the Blender name and logo are **trademarks of the Blender Foundation**, and they are explicitly *excluded* from the GNU GPL. The GPL grants the right to modify and redistribute the **code** — it grants nothing over the **brand**. Shipping a modified Blender under Blender's own identity blurs the line between an official release and this one, which is exactly what trademark law exists to prevent.
 
 So 1.1 gives the build its own identity: **`MattRM2VFX.exe`**, its own application and file icons, its own splash and its own name throughout the interface.
 
