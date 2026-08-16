@@ -6,7 +6,9 @@
 
 A custom Blender build for professional VFX pipelines. Built on Blender 5.2.2 LTS, it extends Cycles with production features long standard in Arnold and RenderMan but missing from stock Blender.
 
-> **Release 1.0.1** — maintenance release: reworked Z Depth pass (locked Near/Far, Normalize, volume depth composited against the surface behind it rather than against the range) and several deep volume fixes, including camera-inside-volume and the end of a silent truncation on dense volumes. Feedback from professionals and hobbyists shapes what comes next.
+> **Release 1.1** — **the build is renamed.** The executable is now `MattRM2VFX.exe`, with its own name, icons and splash. Everything else is unchanged: same `.blend` format, same Python API, same configuration folder, same add-ons. See [The Rename](#the-rename--and-why-nothing-else-changed) below.
+>
+> This release also brings the **reworked Z Depth pass** (locked Near/Far, Normalize, volume depth composited against the surface behind it rather than against the range), several **deep volume fixes**, and a fix for a **Cycles regression** that broke rendering when the texture cache was used with CPU and GPU together.
 
 > **Unofficial build.** *MattRM2 VFX Build* is an independent, modified version of Blender under the **GNU GPL v3**. It is **not** created, sponsored, or endorsed by the Blender Foundation. "Blender" is a trademark of the Blender Foundation — [blender.org](https://www.blender.org).
 
@@ -24,6 +26,38 @@ Blender is world-class, but a few VFX pipeline features are still missing for pr
 - **And more** — see the roadmap
 
 The goal isn't to fork Blender, but to ship production features now and upstream fixes over time.
+
+---
+
+## The Rename — and Why Nothing Else Changed
+
+Until 1.0.1 this build shipped as `blender.exe`, under Blender's name, icons and logo. That was never right: the Blender name and logo are **trademarks of the Blender Foundation**, and they are explicitly *excluded* from the GNU GPL. The GPL grants the right to modify and redistribute the **code** — it grants nothing over the **brand**. Shipping a modified Blender under Blender's own identity blurs the line between an official release and this one, which is exactly what trademark law exists to prevent.
+
+So 1.1 gives the build its own identity: **`MattRM2VFX.exe`**, its own application and file icons, its own splash and its own name throughout the interface.
+
+### What this changes for you
+
+| | |
+|---|---|
+| The executable | `blender.exe` → **`MattRM2VFX.exe`** |
+| Desktop shortcuts | must be recreated once |
+| Pipeline tools, render farms, watch folders | point them at `MattRM2VFX.exe` in their *Blender executable* setting |
+
+If a third-party tool insists on an executable literally named `blender.exe`, create a hard link from the installation folder — `mklink /H blender.exe MattRM2VFX.exe`.
+
+### What this does *not* change — by design
+
+This is a rebrand on the surface. Underneath, the build stays **deliberately identical to Blender**:
+
+- **`.blend` files are unchanged.** Same format, same magic header. Files move in both directions between this build and official Blender, with no conversion and no loss.
+- **The Python API is unchanged.** `bpy.app.version` still reports `(5, 2, 2)`. Every add-on that checks the Blender version keeps working, and nothing was added to `bpy` that could shadow it.
+- **The configuration folder is shared.** Preferences, add-ons and extensions live where Blender puts them. Your existing setup is picked up as-is — nothing to reinstall.
+- **The online extensions platform works normally.** The build identifies itself to `extensions.blender.org` exactly as Blender does, so compatibility filtering behaves correctly.
+- **Keymaps and themes are untouched.** *Blender Dark*, *Blender Light* and the stock keymaps are still there under their own names.
+
+The one consequence worth knowing: because the configuration folder is shared, installing this build **alongside** an official Blender 5.2 means both use the same preferences and add-ons. A setting changed in one appears in the other.
+
+> **This is not a fork.** It tracks Blender release by release, and the goal remains to ship production features early and push fixes upstream over time.
 
 ---
 
@@ -194,6 +228,14 @@ Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadow
   </table>
 </div>
 
+### <u>Texture Cache with CPU + GPU Rendering</u>
+Fixed a Cycles regression where enabling the **Texture Cache** while rendering on CPU *and* GPU together produced large black regions and corrupted textures. Rendering was correct on a single GPU, on two GPUs, or on CPU alone — only the mix failed.
+
+The multi-device wrapper reported unified image memory as soon as *any* device had it, and the CPU always does. Cycles concluded there was nothing to upload, so the GPUs rendered their share of the frame without ever receiving the texture tiles. Upstream fix, merged for 5.3 and tagged for backport to 5.2 but absent from 5.2.2 — applied here ahead of the official patch.
+
+### <u>Blend File Icon on Windows</u>
+Fixed the file association writing its icon reference as a positional index rather than a resource ID, which made Explorer show the **application** icon on `.blend` files instead of the document icon. The same defect exists in official Blender, where it goes unnoticed because both icons carry the same mark.
+
 ---
 
 ## Known Limitations
@@ -221,12 +263,12 @@ Planned by version — order and scope may shift as development progresses.
 
 | Version | Planned |
 |---|---|
-| **v1.1** | **Deep compositing node** (native Blender deep node) + **deep output support in the Compositing EXR writer** |
-| **v1.2** | **DeepID** — per-fragment `objectId`, `materialId`, `normal`, `albedo` — plus a **DeepID compositing node** |
-| **v1.3** | **LPE (Light Path Expressions)** — custom AOVs (Arnold / RenderMan parity) |
-| **v1.4** | **Advanced caustics** — a fast, accurate caustics engine, tracing through volumes |
-| **v1.5** | **USD stage** — Universal Scene Description stage support |
-| **v1.6** | **Scene management** — Gaffer HQ / Katana-style manager for the USD stage, Alembic and Blender data (in design) |
+| **v1.2** | **Deep compositing node** (native Blender deep node) + **deep output support in the Compositing EXR writer** |
+| **v1.3** | **DeepID** — per-fragment `objectId`, `materialId`, `normal`, `albedo` — plus a **DeepID compositing node** |
+| **v1.4** | **LPE (Light Path Expressions)** — custom AOVs (Arnold / RenderMan parity) |
+| **v1.5** | **Advanced caustics** — a fast, accurate caustics engine, tracing through volumes |
+| **v1.6** | **USD stage** — Universal Scene Description stage support |
+| **v1.7** | **Scene management** — Gaffer HQ / Katana-style manager for the USD stage, Alembic and Blender data (in design) |
 
 ---
 
