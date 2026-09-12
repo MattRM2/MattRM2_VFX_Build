@@ -284,9 +284,9 @@ Planned by version — order and scope may shift as development progresses.
 | **v1.2** | **Deep compositing node** (native Blender deep node) + **deep output support in the Compositing EXR writer** |
 | **v1.3** | **DeepID** — per-fragment `objectId`, `materialId`, `normal`, `albedo` — plus a **DeepID compositing node** |
 | **v1.4** | **LPE (Light Path Expressions)** — custom AOVs (Arnold / RenderMan parity) |
-| **v1.5** | **Advanced caustics** — a fast, accurate caustics engine, tracing through volumes |
+| **v1.5** | **Advanced caustics** — a fast, accurate caustics engine, tracing through volumes - ( Maybe merged with v1.2 )|
 | **v1.6** | **USD stage** — Universal Scene Description stage support |
-| **v1.7** | **Scene management** — Gaffer HQ / Katana-style manager for the USD stage, Alembic and Blender data (in design) |
+| **v1.7** | **Scene management** — Gaffer HQ / Katana-style manager for the USD stage, Alembic and Blender data ( Scene assembly, maybe merged with v1.6 ) |
 
 ---
 
