@@ -71,7 +71,22 @@ Override almost **any property per view layer** — the workflow of Maya's Rende
 - **Per-layer render engine** — override `Render Engine` itself: one scene can render some layers with **Cycles and others with EEVEE in the same F12**, into the same multilayer EXR. The viewport and the whole render UI follow the active layer's engine.
 - **Per-layer samples** — override *Max Samples* per layer: 4096 on the hero layer, 64 on a matte layer, in one render.
 - **Per-layer shaders** — override any node socket (a *Mix Shader* factor becomes a per-layer shader switch), with the **material preview** following the active layer.
+- **Per-layer output file** — override `Output > Output Path` and that layer is written to its own file sequence, **straight from the render layers, before compositing** — built for finishing in Nuke / Fusion / Resolve. Override the **Media Type / File Format** block too, or simply type the extension you want: `Layer01.####.png` and `Layer03.####.exr` can come out of the same render. When every rendered layer has its own output, no combined file is written at all. Do not combine this with Blender's compositor in the same scene (see limitations).
+- **Per-layer frame range** — override `Frame Start` / `Frame End` per layer: render a static matte once while the animated layer runs the full range, in a single job.
 - **Fully integrated** — values persist in the `.blend`, the color picker / eyedropper / copy-paste / tooltips all read and write the per-layer value, and panels grey in/out per layer.
+
+> ### ⚠️ **A frame range override also applies inside Blender, in F12**
+>
+> **This is the trade-off of the frame range override, and it is not a bug.** Once a view layer
+> carries a `Frame Start` / `Frame End` override, **only the frames it covers are ever rendered —
+> including a plain F12 in the interface**, not just command-line or animation renders.
+>
+> On a frame outside that range the layer is **not computed at all**: it is absent from the
+> render result, nothing is written for it, and the *Render Result* window shows nothing when
+> that layer is the active one. A layer's range is also **intersected** with the range you ask
+> for, so it can never extend a render beyond it.
+>
+> If you want a layer back on every frame, remove its frame range override.
 
 <div align="center">
   <img src="medias/Overrides_menu.png" width="1600"/>
@@ -250,7 +265,10 @@ Fixed the file association writing its icon reference as a positional index rath
 | A volume straddling an opaque surface still contributes from its hidden part | The march does not clip at surfaces. In practice self-limiting — dense volumes saturate before the occluder — and always bounded by the nearest surface depth. |
 | Multi-Layer Deep EXR: Nuke reads only the first deep part | It's a Fusion / Resolve format; for Nuke, use the standard per-layer deep files (`Deep/<layer>/`). |
 | Multi-Layer Deep EXR with multi-view (stereo) | Cycles deep is mono — render mono, or use the per-layer deep files. |
-| View Layer Overrides: resolution, borders, frame range and output path/format cannot be overridden | By design — these are read once per render by the pipeline. Use the compositor File Output node for per-layer outputs — full control over per-layer paths and formats. |
+| View Layer Overrides: resolution, borders and FPS cannot be overridden | By design — these are read once per render from the pipeline's own copy of the render settings. Output path, output format and frame range **are** overridable (see above). |
+| View Layer Overrides: a frame range override also restricts F12 in the interface | By design, and the trade-off of the feature — a layer outside its range is not computed, so nothing is written and the Render Result shows nothing for it. Remove the override to get the layer back on every frame. |
+| View Layer Overrides: per-layer output cannot produce a video file, and does not redirect Deep EXR | A video stream cannot be split per layer; the override is ignored for movie formats. Deep EXR keeps its own per-layer naming (`Deep/<layer>/`). |
+| **View Layer Overrides: per-layer output and Blender's compositor do not mix in the same scene** | Per-layer files are written straight from the render layers, **before compositing** — which is exactly what you want when you finish in Nuke / Fusion / Resolve. The combined file, on the other hand, is the compositor's own output (vanilla Blender behaviour), so a layer left without an output override loses its own image to the composite. **Rule of thumb: no output override → drive your outputs from the compositor; output override → keep the compositor out of that scene.** A pipeline that serves both is on the roadmap. |
 | View Layer Overrides: animated or driven properties cannot be overridden | By design — an override and an F-Curve would fight over the value. Remove the animation first, or drive the property per layer another way. |
 | Z Depth: hard edge where a motion-blurred surface is partly in front of a volume | Split only the **Depth**: render surface and volume on separate View Layers, each with Depth, and `min()` the two depths in compositing. The color / beauty pass can keep both surface and volume together. |
 | Multi-device (XPU) + OptiX: a camera-visible Indirect-Only volume over a Shadow Catcher can leave a faint CPU/GPU seam in the Shadow Catcher pass | Render such shots on **CUDA** (fully consistent), or set the volume camera-invisible. Does not affect CUDA XPU, pure OptiX, or any other pass. |
