@@ -222,6 +222,18 @@ A **Deep EXR control panel** ships as a demo — enable *MattRM2 — Deep EXR Pa
 
 ---
 
+### <u>Curves Lofting — Geometry Nodes</u>
+
+A **Curves Lofting** node (*Add ▸ Curve ▸ Operations*) sweeps a surface through a series of curves that share the same number of evaluated points — the loft of Maya, Houdini and Rhino, as a real node instead of a node-group workaround built on a grid.
+
+The node starts with two curve inputs and grows: drop a link on the dotted socket, or press *Add Item* in the sidebar, and the inputs are numbered for you. An input holding several curves adds them all, in index order. **Interpolation** is *Linear* or *Spline* — a Catmull-Rom that passes through every curve — **Subdivisions** adds intermediate sections between each pair of curves, and **Close Loft** joins the last curve back to the first.
+
+Three outputs: the **Mesh**, a **UV Map** field (U along the curves, V from the first curve to the last), and the **Curves** themselves — the inputs plus every section generated in between, ready to be re-swept or re-sampled. Point attributes are interpolated along with the surface, so a captured attribute survives the loft; per-curve attributes, `material_index` included, stay constant across each band.
+
+> **What you have to know:** every curve needs the same number of *evaluated* points and the same direction — a *Resample Curve* before the loft settles the first, a *Reverse Curve* the second. Closed and open curves cannot be mixed in one loft. With only two curves the surface is straight whatever the interpolation, exactly as in Maya and Houdini: two sections say nothing about how the surface should bend between them. When curves are unevenly spaced and the spline bulges past them, switch *Spline Type* from *Uniform* to *Centripetal*.
+
+---
+
 ## Bugfix
 
 ### <u>Node Editor Click-Drag</u>
