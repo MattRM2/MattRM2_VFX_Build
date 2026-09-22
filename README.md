@@ -4,7 +4,7 @@
 
 # MattRM2 VFX Build
 
-A custom Blender build for professional VFX pipelines. Built on Blender 5.2.2 LTS, it extends Cycles with production features long standard in Arnold and RenderMan but missing from stock Blender.
+A custom Blender build for professional VFX pipelines. Built on Blender 5.2.0 LTS, it extends Cycles with production features long standard in Arnold and RenderMan but missing from stock Blender.
 
 > **Release 1.1** — **the build is renamed.** The executable is now `MattRM2VFX.exe`, with its own name, icons and splash. Everything else is unchanged: same `.blend` format, same Python API, same configuration folder, same add-ons. See [The Rename](#the-rename--and-why-nothing-else-changed) below.
 >
@@ -239,7 +239,7 @@ Three outputs: the **Mesh**, a **UV Map** field (U along the curves, V from the 
 ## Bugfix
 
 ### <u>Node Editor Click-Drag</u>
-Fixed a Blender bug (still present in official 5.2.2) where click-dragging a node moved a different node than the one under the cursor — the wrong selection persisted in the `.blend`. Included ahead of the upstream patch.
+Fixed a Blender bug (present in official Blender 5.2.0, the base of this build) where click-dragging a node moved a different node than the one under the cursor — the wrong selection persisted in the `.blend`. Included ahead of the upstream patch.
 
 ### <u>Volume Indirect-Only Shadows</u>
 Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadows — on surfaces whose geometry meets the volume's bounding box, and on other volumes (volume-on-volume). Correct on **CPU, CUDA and OptiX**.
@@ -251,7 +251,7 @@ Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadow
       <td align="center"><img src="medias/Volume_Indirect_Only_After.png" width="480"/></td>
     </tr>
     <tr>
-      <td align="center"><b>Before</b> — stock Blender 5.2.2: no shadow where the bounding box meets the floor</td>
+      <td align="center"><b>Before</b> — stock Blender 5.2.0: no shadow where the bounding box meets the floor</td>
       <td align="center"><b>After</b> — this build: shadow cast correctly</td>
     </tr>
   </table>
@@ -260,7 +260,7 @@ Fixed a Cycles bug where volumes in **Indirect-Only** collections cast no shadow
 ### <u>Texture Cache with CPU + GPU Rendering</u>
 Fixed a Cycles regression where enabling the **Texture Cache** while rendering on CPU *and* GPU together produced large black regions and corrupted textures. Rendering was correct on a single GPU, on two GPUs, or on CPU alone — only the mix failed.
 
-The multi-device wrapper reported unified image memory as soon as *any* device had it, and the CPU always does. Cycles concluded there was nothing to upload, so the GPUs rendered their share of the frame without ever receiving the texture tiles. Upstream fix, merged for 5.3 and tagged for backport to 5.2 but absent from 5.2.2 — applied here ahead of the official patch.
+The multi-device wrapper reported unified image memory as soon as *any* device had it, and the CPU always does. Cycles concluded there was nothing to upload, so the GPUs rendered their share of the frame without ever receiving the texture tiles. Upstream fix ([#161407](https://projects.blender.org/blender/blender/issues/161407)), also shipped in official Blender 5.2.1 — this build is based on 5.2.0 and carries it as a backport.
 
 ### <u>Blend File Icon on Windows</u>
 Fixed the file association writing its icon reference as a positional index rather than a resource ID, which made Explorer show the **application** icon on `.blend` files instead of the document icon. The same defect exists in official Blender, where it goes unnoticed because both icons carry the same mark.
@@ -271,6 +271,7 @@ Fixed the file association writing its icon reference as a positional index rath
 
 | Issue | Workaround |
 |---|---|
+| The About screen and `bpy.app.version` report **5.2.2** | The build is Blender **5.2.0** underneath: a version number left over from an earlier merge. It does not carry the upstream 5.2.1 / 5.2.2 fixes, apart from the texture-cache fix listed above. Corrected in the next build. |
 | Deep EXR is incompatible with **Noise Threshold** (adaptive sampling) | Adaptive sampling stops pixels at different sample counts, breaking deep accumulation. Set Noise Threshold to `0` and use a fixed sample count. Expected, not a bug. |
 | GPU deep uses a per-pixel layer cap (CPU is unlimited) | **Max Depth** `-1` (default) maps to 96 on GPU, and can be raised to 1024. The march never truncates: past the budget it coarsens instead, so the volume stays complete with thicker slabs. Raise Max Depth when a shot needs finer depth resolution. |
 | CPU and GPU deep are not bit-identical | The CPU recorder is unbounded; on GPU the march coarsens to fit the per-pixel budget. Same opacities, thicker slabs. Render on CPU if a shot needs the finest possible slabs. |
@@ -308,7 +309,7 @@ Planned by version — order and scope may shift as development progresses.
 
 | | |
 |---|---|
-| **Base** | Blender 5.2.2 LTS (official release) |
+| **Base** | Blender 5.2.0 LTS (official release) |
 | **Branch** | `blender-v5.2-custom` |
 | **Platform** | Windows x64 |
 | **Compiler** | MSVC 2022 (vc17) |
@@ -334,6 +335,20 @@ This build was created by me, **Matthieu Barbié**, a 3D professional with exper
 This project represents months of low-level Cycles development: deep EXR architecture, Arnold-style volume rendering, pipeline integration, and upstream bug fixes. All improvements are developed with the intent to contribute back to the official Blender project over time.
 
 > *"Blender deserves to be a first-class citizen in VFX pipelines. This build is a step in that direction."*
+
+---
+
+## Source Code
+
+*MattRM2 VFX Build* is a modified version of Blender under the **GNU GPL v3**, and the complete source corresponding to each released binary is published with it.
+
+Starting with 1.1, every release on this repository carries a `MattRM2_VFX_BUILD_<version>_source.zip` asset, alongside the binary. It contains the full source tree the binary was built from — upstream Blender plus this project's changes — and a `BUILD.md` with the toolchain, the CMake configuration and the build steps used to produce the release.
+
+As in Blender's own source releases, the archive excludes `tests/files` (regression-test media, not needed to build or install) and the precompiled dependency libraries, which are fetched separately from [projects.blender.org](https://projects.blender.org/blender) — `BUILD.md` explains how.
+
+| Release | Source archive |
+|---|---|
+| 1.1 | `MattRM2_VFX_BUILD_1.1_source.zip` — base Blender 5.2.0 LTS (`fbe6228777e7`), built at `f5fd621b603` |
 
 ---
 
