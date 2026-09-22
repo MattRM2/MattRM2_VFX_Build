@@ -342,13 +342,16 @@ This project represents months of low-level Cycles development: deep EXR archite
 
 *MattRM2 VFX Build* is a modified version of Blender under the **GNU GPL v3**, and the complete source corresponding to each released binary is published with it.
 
-Starting with 1.1, every release on this repository carries a `MattRM2_VFX_BUILD_<version>_source.zip` asset, alongside the binary. It contains the full source tree the binary was built from — upstream Blender plus this project's changes — and a `BUILD.md` with the toolchain, the CMake configuration and the build steps used to produce the release.
+Every release on this repository that ships a binary carries a `MattRM2_VFX_BUILD_<version>_source.zip` asset alongside it. It contains the full source tree the binary was built from — upstream Blender plus this project's changes — and a `BUILD.md` with the toolchain, the CMake configuration and the build steps used to produce the release.
 
 As in Blender's own source releases, the archive excludes `tests/files` (regression-test media, not needed to build or install) and the precompiled dependency libraries, which are fetched separately from [projects.blender.org](https://projects.blender.org/blender) — `BUILD.md` explains how.
 
 | Release | Source archive |
 |---|---|
 | 1.1 | `MattRM2_VFX_BUILD_1.1_source.zip` — base Blender 5.2.0 LTS (`fbe6228777e7`), built at `f5fd621b603` |
+| 1.0 | `MattRM2_VFX_BUILD_1.0_source.zip` — base Blender 5.2.0 LTS (`fbe6228777e7`), source commit `a3f5ac2bf91` |
+
+The 0.x betas no longer ship a binary.
 
 ---
 
