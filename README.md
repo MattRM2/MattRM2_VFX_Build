@@ -296,12 +296,10 @@ Planned by version — order and scope may shift as development progresses.
 
 | Version | Planned |
 |---|---|
-| **v1.2** | **Deep compositing, end to end** — native deep nodes in Blender's compositor, with deep read and deep output through the Compositing EXR writer. Also a **native camera** with real lens optics (custom bokeh, aberrations, flares, diffraction), an **optical Z Depth** that follows reflection and refraction, and **nested dielectrics** — an IOR priority system, so refractive surfaces that touch (liquid in a glass, ice in a drink) render without the phantom air gap between them. On the light-transport side, **path guiding on the GPU** (Cycles only guides on the CPU today), so small light sources and interiors lit indirectly clean up faster on every device |
-| **v1.3** | **Advanced caustics** — a fast, accurate caustics engine, tracing through volumes |
-| **v1.4** | **DeepID** — per-fragment `objectId`, `materialId`, `normal`, `albedo` — plus a **DeepID compositing node** |
-| **v1.5** | **LPE (Light Path Expressions)** — custom AOVs (Arnold / RenderMan parity) |
-| **v1.6** | **USD stage** — Universal Scene Description stage support |
-| **v1.7** | **Scene management** — Gaffer HQ / Katana-style manager for the USD stage, Alembic and Blender data ( Scene assembly, maybe merged with v1.6 ) |
+| **v1.2** | **Deep compositing, end to end** (**delivered**) — native deep nodes in Blender's compositor: deep read and output, merge and holdout, colour, crop and transform, weighted masks, a physical **Deep Fog** and the **Deep Viewer**; and the **optical Z Depth** (**delivered**). **Advanced caustics** — a fast, accurate caustics engine (progressive photon mapping), tracing through volumes and compatible with deep output. A **native camera** with real lens optics (custom bokeh, aberrations, diffraction, lens parameters), and **nested dielectrics** — an IOR priority system, so refractive surfaces that touch (liquid in a glass, ice in a drink) render without the phantom air gap between them. On the light-transport side, **path guiding on the GPU** (Cycles only guides on the CPU today), so small light sources and interiors lit indirectly clean up faster on every device. Also a **VDB Retime** modifier, and builds for **Windows and Linux** |
+| **v1.3** | **Deep, further** — **DeepID** (per-fragment object and material IDs with hierarchical names, following the official OpenEXR DeepID specification), **render passes stored per deep fragment** (diffuse, glossy, transmission, emission…) and **Deep+** compositing nodes that work on them. A native **SDF modeling** tool. A **macOS** build: Apple silicon, GPU rendering requires macOS 15 or later |
+| **v1.4** | **LPE (Light Path Expressions)** — custom AOVs (Arnold / RenderMan parity) |
+| **v1.5** | **Scene assembly & USD stage** — Universal Scene Description stage support, with a Gaffer HQ / Katana-style scene assembly that manages the USD stage, Alembic and Blender data together |
 
 ---
 
